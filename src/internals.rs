@@ -1,7 +1,4 @@
-use core::{
-    marker::PhantomData,
-    mem::ManuallyDrop,
-};
+use core::{marker::PhantomData, mem::ManuallyDrop};
 
 #[doc(hidden)]
 #[derive(Copy, Clone)]
@@ -17,11 +14,10 @@ impl<const N: usize> Usize<N> {
     }
 }
 
-
 ///
 /// # Safety
 ///
-/// Implementors must have exactly one type parameter, 
+/// Implementors must have exactly one type parameter,
 /// and the `T` associated type must be the value of that type parameter.
 #[doc(hidden)]
 pub unsafe trait GetTypeParam: Sized {
@@ -30,11 +26,8 @@ pub unsafe trait GetTypeParam: Sized {
     const PROOF: TypeParam<Self, Self::T> = TypeParam { types: PhantomData };
 }
 
-pub struct TypeParam<S, T>{
-    types: PhantomData<fn() -> (
-        PhantomData<S>,
-        PhantomData<T>,
-    )>,
+pub struct TypeParam<S, T> {
+    types: PhantomData<fn() -> (PhantomData<S>, PhantomData<T>)>,
 }
 
 impl<S, T> Copy for TypeParam<S, T> {}
@@ -45,7 +38,7 @@ impl<S, T> Clone for TypeParam<S, T> {
     }
 }
 
-impl<S, T> TypeParam<S, T>{
+impl<S, T> TypeParam<S, T> {
     #[inline(always)]
     pub const fn assert_type_param(self, _: PhantomData<T>) {}
 
@@ -55,7 +48,6 @@ impl<S, T> TypeParam<S, T>{
 
     const __NEW: Self = Self { types: PhantomData };
 }
-
 
 pub unsafe trait ArrayLength {
     const LENGTH: usize;
@@ -69,19 +61,16 @@ unsafe impl<T, const L: usize> ArrayLength for [T; L] {
     const LENGTH: usize = L;
 }
 
-
 #[repr(transparent)]
-pub struct Identity<T>{
-    pub inner: T
+pub struct Identity<T> {
+    pub inner: T,
 }
 
 #[repr(transparent)]
-pub struct ArrayAndGhost<T, const LEN: usize>{
+pub struct ArrayAndGhost<T, const LEN: usize> {
     pub inner: [T; LEN],
     pub elem_ty: PhantomData<T>,
 }
-
-
 
 #[doc(hidden)]
 pub const unsafe fn concat_arrays<From_, T, const CONCAT_LEN: usize>(
@@ -93,12 +82,11 @@ pub const unsafe fn concat_arrays<From_, T, const CONCAT_LEN: usize>(
     assert!(size_of::<From_>() == size_of::<[T; CONCAT_LEN]>());
 
     const_transmute!(
-        ArrayHList<Rem, T, LEN>, 
+        ArrayHList<Rem, T, LEN>,
         [T; CONCAT_LEN],
         this
     )
 }
-
 
 /// Helper type for transmuting non-Copy types without adding any overhead in debug builds.
 ///
@@ -118,7 +106,5 @@ macro_rules! const_transmute {
             .to,
         )
     };
-} use const_transmute;
-
-
-
+}
+use const_transmute;
