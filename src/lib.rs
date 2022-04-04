@@ -63,3 +63,7 @@ pub mod __ {
 
     pub use crate::internals::*;
 }
+
+#[cfg(feature = "derive")]
+#[doc = include_str!("../README.md")]
+pub struct ReadmeTest;
