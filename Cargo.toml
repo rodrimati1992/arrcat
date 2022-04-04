@@ -1,8 +1,26 @@
 [package]
 name = "arrcat"
 version = "0.1.0"
+authors = ["rodrimati1992 <rodrimatt1985@gmail.com>"]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "Zlib"
+description = "Array concatenation"
+documentation = "https://docs.rs/arrcat/"
+readme="./README.md"
+keywords = ["no-std", "macro", "arrays"]
+categories = ["no-std", "rust-patterns"]
+repository = "https://github.com/rodrimati1992/arrcat/"
+include = [
+    "Cargo.toml", 
+    "src/**/*.rs", 
+    "README.md",
+    "LICENSE-ZLIB.md", 
+]
 
 [dependencies]
+
+
+
+[dev-dependencies.core_extensions]
+version = "1.5"
+features = ["const_default", "const_val"]

@@ -7,7 +7,7 @@
 //! ### `concat_arrays`
 //!
 //! For more examples of using [`concat_arrays`],
-//! you can [look here](crate::concat_arrays#examples).
+//! you can [look here][concat_arrays_examples].
 //!
 //! ```rust
 //! use arrcat::concat_arrays;
@@ -36,7 +36,16 @@
 //!
 //! ```
 //!
+//! # No-std support
 //!
+//! `arrcat` is `#![no_std]`, it can be used anywhere Rust can be used.
+//!
+//! # Minimum Supported Rust Version
+//!
+//! `arrcat` requires Rust 1.57.0, requiring crate features to use newer language features.
+//!
+//!
+//! [concat_arrays_examples]: crate::concat_arrays#examples
 
 #![no_std]
 
