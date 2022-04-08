@@ -4,7 +4,36 @@
 ///
 /// [**examples below**](#examples)
 ///
-/// # Special syntax
+/// # Syntax
+///
+/// The syntax of this macro, using `macro_rules!`-like input syntax
+///
+/// ```text
+/// concat_arrays!{
+///     $( length_type = $length_type:ty ;)?
+///     
+///     $( $array_arg:array_expr $(: $argument_type:ty )? ),*
+///     $(,)?
+/// }
+/// ```
+///
+/// Where `$length_type` is a concrete type.
+/// When this argument is passed,
+/// a `$length_type::LEN` associated constant
+/// is defined with the length of the returned array.
+/// [example below](#length-inference-example)
+///
+/// Where `$array_arg` can be any of:
+///
+/// - `[ $($array_contents:tt)* ]`: an array literal.
+///
+/// - A `()`/`{}`-delimited expression of array type. Eg: `(foo.bar())`, `{foo(); bar()}`.
+///
+/// - `$path:path` expression of array type. Eg: `foo`, `::foo::bar`, `Foo::<T>::BAR`.
+///
+/// Where `$argument_type` is the type of that argument (always an array).
+///
+/// ### Special syntax
 ///
 /// This macro allows inferring the length of arrays in type annotations, with a `_` length:
 /// ```rust
@@ -30,8 +59,8 @@
 ///
 /// ### Argument from other macros
 ///
-/// Note that due to how `$expr_arg:expr` macro parameters work,
-/// `$expr_arg` arguments from other macros aren't parsed as an array literal,
+/// Note that due to how `:expr` macro parameters work,
+/// arguments of that type from other macros aren't parsed as an array literal,
 /// so they may require a type annotation.
 ///
 /// These are two ways that the caller macro can parse that parameter to
@@ -39,10 +68,9 @@
 /// - `$array_arg:tt`, passed as `$array_arg`
 /// - `[$($array_arg:tt)*]`, passed as `[$($array_arg)*]`
 ///
-/// The same limitation applies to parsing type annotations.
+/// The same limitation applies to parsing type annotations.<br>
 /// If the caller macro passes a `$type:ty` as the type of an argument,
-/// it'll be treated like a concrete type,
-/// and the `_` length argument (in `[T; _]`) won't be parsed by this macro.
+/// it'll require the length of the array to be specified.
 ///
 /// # Examples
 ///
@@ -63,7 +91,6 @@
 /// use arrcat::concat_arrays;
 ///
 /// assert_eq!(consts(), [Some(3), Some(5), None, Some(8), None, None, None]);
-///
 ///
 /// fn consts() -> [Option<u16>; 7] {
 ///     concat_arrays!(
@@ -114,19 +141,66 @@
 /// }
 /// ```
 ///
+/// <span id = "length-inference-example"></span>
+/// ### Length constant
+///
+/// This macro allows getting the length of the returned array,
+/// by declaring an associated constant on a passed-in type.
+///
+/// The length can then be used anywhere that can access the passed-in type.
+///
+/// ```rust
+/// use arrcat::concat_arrays;
+///
+/// assert_eq!(foo(0xF00), [0xF00, 3, 5, 8, 13, 21, 34, 55]);
+///
+/// enum FooLen{}
+/// const fn foo(x: u64) -> [u64; FooLen::LEN] {
+///     let foo = [x, 3, 5, 8];
+///
+///     concat_arrays!{
+///         // makes the macro define the `FooLen::LEN` associated constant with
+///         // the length of the returned array
+///         length_type = FooLen;
+///         
+///         foo: [_; 4],
+///         [13, 21, 34, 55],
+///     }
+/// }
+///
+/// ```
 #[macro_export]
 macro_rules! concat_arrays {
     () => ([]);
+    ($(length_type = $length_type:ty)?; $($args:tt)* ) => (
+        $crate::__concat_arrays_preprocess_inner!{
+            (config(length_type($($length_type)?)))
+            ($($args)*)
+        }
+    );
     ( $($args:tt)* ) => (
-        $crate::__concat_arrays_preprocess_inner!{() ($($args)*)}
-    )
+        $crate::__concat_arrays_inner!{(config(length_type())) ($($args)*)}
+    );
 }
 
 #[doc(hidden)]
 #[macro_export]
 macro_rules! __concat_arrays_preprocess_inner {
+    ( $config:tt () ) => {
+        $crate::__concat_arrays_inner! {$config ([])}
+    };
+    ( $config:tt $args:tt ) => {
+        $crate::__concat_arrays_inner! {$config $args}
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __concat_arrays_inner {
     (
         (
+            config(length_type $length_type:tt)
+
             $(
                 (
                     $expr:expr,
@@ -153,11 +227,14 @@ macro_rules! __concat_arrays_preprocess_inner {
             $crate::__::concat_arrays::<
                 _,
                 _,
-                {
-                    let mut len = 0;
-                    $( len += $len; )*
-                    len
-                }
+                {$crate::__declare_length_type_and_pass!(
+                    $length_type,
+                    {
+                        let mut len = 0;
+                        $( len += $len; )*
+                        len
+                    }
+                )}
             >(
                 __Concater(
                     $($crate::__type_ascription!(($expr) ($($type)*)),)*
@@ -171,7 +248,7 @@ macro_rules! __concat_arrays_preprocess_inner {
         ($($prev:tt)*)
         ( [$($array:tt)*] $(: [$elem_ty:ty; $($len:tt)*])?  $(, $($rem:tt)*)? )
     ) => {
-        $crate::__concat_arrays_preprocess_inner!{
+        $crate::__concat_arrays_inner!{
             (
                 $($prev)*
                 (
@@ -189,7 +266,7 @@ macro_rules! __concat_arrays_preprocess_inner {
         ($($prev:tt)*)
         ( [$($array:tt)*] $(: $type:ty)?  $(, $($rem:tt)*)? )
     ) => {
-        $crate::__concat_arrays_preprocess_inner!{
+        $crate::__concat_arrays_inner!{
             (
                 $($prev)*
                 (
@@ -208,7 +285,7 @@ macro_rules! __concat_arrays_preprocess_inner {
         ($($prev:tt)*)
         ( $expr:tt $(: [$elem_ty:ty; $($len:tt)*])?  $(, $($rem:tt)*)? )
     ) => {
-        $crate::__concat_arrays_preprocess_inner!{
+        $crate::__concat_arrays_inner!{
             (
                 $($prev)*
                 (
@@ -226,7 +303,7 @@ macro_rules! __concat_arrays_preprocess_inner {
         ($($prev:tt)*)
         ( $expr:tt $(: $type:ty)?  $(, $($rem:tt)*)? )
     ) => {
-        $crate::__concat_arrays_preprocess_inner!{
+        $crate::__concat_arrays_inner!{
             (
                 $($prev)*
                 (
@@ -241,14 +318,14 @@ macro_rules! __concat_arrays_preprocess_inner {
     };
 
     ( $prev:tt ( $expr:path $(: $($rem:tt)*)? ) ) => {
-        $crate::__concat_arrays_preprocess_inner!{
+        $crate::__concat_arrays_inner!{
             $prev
             (($expr) $(: $($rem)*)?)
         }
     };
 
     ( $prev:tt ( $expr:path $(, $($rem:tt)*)? ) ) => {
-        $crate::__concat_arrays_preprocess_inner!{
+        $crate::__concat_arrays_inner!{
             $prev
             (($expr) $(, $($rem)*)?)
         }
@@ -305,5 +382,20 @@ macro_rules! __type_ascription {
     };
     (($e:expr) ($ty:ty)) => {
         $crate::__::Identity::<$ty> { inner: $e }.inner
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __declare_length_type_and_pass {
+    (($length_type:ty), $length:expr) => {{
+        impl $length_type {
+            pub const LEN: $crate::__::usize = $length;
+        }
+
+        <$length_type>::LEN
+    }};
+    ((), $length:expr) => {
+        $length
     };
 }

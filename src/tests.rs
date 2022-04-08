@@ -120,11 +120,22 @@ fn test_runtime_variable_arg() {
 
 #[test]
 fn test_runtime_expression_arg() {
+    fn do_nothing() {}
     fn rt<T>(x: T) -> T {
         x
     }
 
-    // runtime expression, transparent type ascription
+    // runtime expression, transparent type ascription, expr in braces
+    {
+        let arr = concat_arrays!(
+            {
+                do_nothing();
+                rt(FooConst::C)
+            }: [u8; 4]
+        );
+        asserteq(arr, [3, 3, 3, 3]);
+    }
+    // runtime expression, transparent type ascription, expr in parentheses braces
     {
         let arr = concat_arrays!((rt(FooConst::C)): [u8; 4]);
         asserteq(arr, [3, 3, 3, 3]);
@@ -217,7 +228,7 @@ fn test_comma_sep() {
 }
 
 #[test]
-fn test_macro_caller() {
+fn test_macro_called_by_macro() {
     {
         macro_rules! prepended_lit {
             ($prefix:tt) => {
@@ -255,6 +266,27 @@ fn test_macro_caller() {
         asserteq(prepended!([3, 5, 6]: _), [3, 5, 6, 80, 81]);
         asserteq(prepended!([3, 5, 6]: [_; _]), [3, 5, 6, 80, 81]);
         asserteq(prepended!(array: [_; 3]), [3, 5, 8, 80, 81]);
+    }
+}
+
+#[test]
+fn length_type_arg() {
+    {
+        enum L {}
+        let _: &[u8] = &concat_arrays!(length_type = L;);
+        assert_eq!(L::LEN, 0);
+    }
+    {
+        enum L {}
+        let _: &[u8] = &concat_arrays!(length_type = L; [1]);
+        assert_eq!(L::LEN, 1);
+    }
+    {
+        const C: [u8; 5] = [5, 8, 13, 21, 34];
+        enum L {}
+        const A: [u8; L::LEN] = concat_arrays!(length_type = L; [1], [2; 3], C);
+        asserteq(A, [1, 2, 2, 2, 5, 8, 13, 21, 34]);
+        assert_eq!(L::LEN, 9);
     }
 }
 

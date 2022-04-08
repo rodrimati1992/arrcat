@@ -27,8 +27,8 @@
 //!     let concated = concat_arrays!(
 //!         // the macro can't infer the length of runtime array non-literals.
 //!         increasing: [_; 3],
-//!         // non-literal/path expressions need to be parenthesized.
-//!         ([2u16, 3, 4].map(|y| x * 3)): [_; 3],
+//!         // most non-literal arguments need to be wrapped in `()` or `{}`.
+//!         ([2u16, 3, 4].map(|x| x * 9)): [_; 3],
 //!     );
 //!
 //!     assert_eq!(concated, [8, 9, 10, 18, 27, 36]);
@@ -59,7 +59,9 @@ mod macros;
 
 #[doc(hidden)]
 pub mod __ {
-    pub use core::{compile_error, concat, marker::PhantomData, mem::ManuallyDrop, stringify};
+    pub use core::{
+        compile_error, concat, marker::PhantomData, mem::ManuallyDrop, primitive::usize, stringify,
+    };
 
     pub use crate::internals::*;
 }
