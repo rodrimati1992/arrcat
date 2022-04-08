@@ -50,4 +50,5 @@ use arrcat::concat_arrays;
 `arrcat` requires Rust 1.57.0, requiring crate features to use newer language features.
 
 
+[`concat_arrays`]: https://docs.rs/arrcat/*/arrcat/macro.concat_arrays.html
 [concat_arrays_examples]: https://docs.rs/arrcat/*/arrcat/macro.concat_arrays.html#examples
